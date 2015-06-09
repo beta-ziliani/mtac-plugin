@@ -1,0 +1,11 @@
+-Q theories Mtac
+-I src
+
+COQDOC = "$(COQBIN)coqdoc -interpolate -utf8"
+CAMLP4OPTIONS = "-loc loc"
+src/run.mli
+src/run.ml
+src/mtac.ml4
+src/mtac.mllib
+theories/Mtac.v
+test-suite/mtactest.v
