@@ -27,6 +27,12 @@ module Constr = struct
     with Not_found -> raise (Constr_not_found name)
   )
 
+  let mkUConstr sigma env name = lazy (
+    try Evd.fresh_global env sigma
+	  (Nametab.global_of_path (Libnames.path_of_string name)) 
+    with Not_found -> raise (Constr_not_found name)
+  )
+
   let isConstr = fun r c -> eq_constr (Lazy.force r) c
 
   let eq_ind i1 i2 = Names.eq_ind (fst i1) (fst i2)
@@ -80,7 +86,7 @@ module MtacNames = struct
   let mkLazyConstr = fun e-> Constr.mkConstr (mtac_module_name ^ "." ^ e)
   let mkConstr = fun e-> Lazy.force (Constr.mkConstr (mtac_module_name ^ "." ^ e))
   let mkBuilder = fun e-> ConstrBuilder.from_string (mtac_module_name ^ "." ^ e)
-  let mkT_lazy = lazy (mkConstr "Mtac")
+  let mkT_lazy sigma env = Constr.mkUConstr sigma env (mtac_module_name ^ "." ^ "Mtac")
 
   let mkBase = mkLazyConstr "base"
   let mkTele = mkLazyConstr "tele"
@@ -239,8 +245,6 @@ module UnificationStrategy = struct
       Exceptions.block Exceptions.unknown_reduction_strategy 
 
 end
-
-let mkT () = Lazy.force MtacNames.mkT_lazy
 
 module CoqList = struct
   let mkNil  = Constr.mkConstr "Coq.Init.Datatypes.nil"
@@ -939,7 +943,7 @@ let rec run' (env, renv, sigma, undo, metas as ctxt) t =
   let constr c =
     if Term.isConstruct c then
       let ((m, ix), _) = Term.destConstruct c in
-      if Names.eq_ind m (fst (Term.destInd (Lazy.force MtacNames.mkT_lazy))) then
+      if Names.eq_ind m (fst (Term.destInd (snd (Lazy.force (MtacNames.mkT_lazy sigma env))))) then
         ix
       else
         Exceptions.block Exceptions.error_stuck
@@ -1216,19 +1220,8 @@ let run (env, sigma) t  =
       let sigma' = clean_unused_metas sigma' metas v in
       Val (sigma', ExistentialSet.empty, nf_evar sigma' v)
 
-(*
-let pretypeT pretype tycon env evdref lvar c =
-  let t = 
-    match tycon with
-      | Some (_, ty) -> ty
-      | _ ->
-        let sigma, univ = new_univ_variable (UnivFlexible true) !evdref in
-        evdref := sigma;
-        e_new_evar env evdref (mkType univ)
-  in
-  let tt = mkApp(mkT (), [|t|]) in
-  t, pretype (mk_tycon tt) env evdref lvar c
 
+(*
 let pretype_run pretype coerce_to_tycon tycon env evdref lvar loc c =
   let t, r = pretypeT pretype tycon env evdref lvar c in
   let d = run (env, !evdref) r.uj_val in
@@ -1240,7 +1233,7 @@ let pretype_run pretype coerce_to_tycon tycon env evdref lvar loc c =
     | Err (evmap, _, e) -> 
       evdref := evmap ;
       Pretype_errors.error_user_exception loc env !evdref e
-      *)
+      *)      
 (*
 let munify_run env evd f = 
   match run (env, evd) f with

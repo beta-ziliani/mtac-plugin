@@ -76,7 +76,7 @@ Record Case :=
         case_branches : list dyn
         }.
 
-Inductive Mtac : Type -> Prop :=
+Polymorphic Inductive Mtac : Type -> Prop :=
 | tret : forall {A}, Reduction -> A -> Mtac A
 | bind : forall {A B}, Mtac A -> (A -> Mtac B) -> Mtac B
 | ttry : forall {A}, Mtac A -> (Exception -> Mtac A) -> Mtac A
@@ -362,7 +362,7 @@ Module Array.
 
   Definition No0LengthArray : Exception. exact exception. Qed.
 
-  Definition init {A} n (f : N -> M A) : M (t A) :=
+  Definition init {A:Type} n (f : N -> M A) : M (t A) :=
     match n with 
     | N0 => raise No0LengthArray
     | _ => 
