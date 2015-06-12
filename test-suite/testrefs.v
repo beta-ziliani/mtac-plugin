@@ -269,9 +269,11 @@ Definition will_fail :=
 Fail Check (Mrun will_fail).
 
 
+(* Hit a bug in Coq, when it's fixed I'll uncomment this *)
+
 Definition abs_val (a : Type) :=
   r <- ref a;
-  foo <- abs a r;
+  foo <- abs (P:=fun _=>Ref Type) a r;
   foo bool ::= Set;;
   !(foo nat).
 

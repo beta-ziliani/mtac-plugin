@@ -38,13 +38,8 @@ Record dyn := Dyn { type : Type; elem : type }.
 Definition index := N.
 Definition length := N.
 
-Inductive array : forall A : Type, Type :=
-| carray : forall A, index -> length -> array A.
-
-Inductive Ref (A : Type) := 
-| mkRef : array A -> Ref A.
-
-Arguments mkRef {A} _.
+Inductive array (A:Type) : Type :=
+| carray : index -> length -> array A.
 
 Inductive Reduction : Type :=
 | RedNone : Reduction
@@ -145,18 +140,16 @@ Definition tfix3 {A1 A2 A3} B := @tfix3' A1 A2 A3 B Mtac (fun _ x => x).
 Definition tfix4 {A1 A2 A3 A4} B := @tfix4' A1 A2 A3 A4 B Mtac (fun _ x => x).
 Definition tfix5 {A1 A2 A3 A4 A5} B := @tfix5' A1 A2 A3 A4 A5 B Mtac (fun _ x => x).
 
+Definition Ref := array.
 
 Definition ref : forall {A}, A -> Mtac (Ref A) := 
-  fun A x=>
-    bind (array_make 1%N x) (fun a=>tret RedNone (mkRef a)).
+  fun A x=> array_make 1%N x.
 
 Definition read : forall {A}, Ref A -> Mtac A :=
-  fun A r=>
-    match r with mkRef a => array_get a 0%N end.
+  fun A r=> array_get r 0%N.
 
 Definition write : forall {A}, Ref A -> A -> Mtac unit :=
-  fun A r c=>
-    match r with mkRef a => array_set a 0%N c end.
+  fun A r c=> array_set r 0%N c.
 
 (*
 (** Defines [eval f] to execute after elaboration the Mtactic [f]. 
