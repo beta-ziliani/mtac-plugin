@@ -12,8 +12,6 @@ Require Import NArith.BinNat.
 Require Import NArith.BinNatDef.
 
 
-
-
 Module Mtac.
 
 
@@ -76,7 +74,7 @@ Record Case :=
         case_branches : list dyn
         }.
 
-Polymorphic Inductive Mtac : Type -> Prop :=
+Inductive Mtac : Type -> Prop :=
 | tret : forall {A}, Reduction -> A -> Mtac A
 | bind : forall {A B}, Mtac A -> (A -> Mtac B) -> Mtac B
 | ttry : forall {A}, Mtac A -> (Exception -> Mtac A) -> Mtac A
@@ -191,6 +189,8 @@ Export Mtac.
 
 Module MtacNotations.
 
+Notation "'Mrun' t" := ($( rrun t )$) (at level 0).
+
 Notation "'M'" := Mtac.
 
 Notation "'ret'" := (tret RedNone).
@@ -223,7 +223,7 @@ Notation "p =c> b" := (base p%core (fun _=>b%core) UniRed)
   (no associativity, at level 201) : mtac_patt_scope. 
 Notation "p =c> [ H ] b" := (base p%core (fun H=>b%core) UniRed) 
   (no associativity, at level 201, H at next level) : mtac_patt_scope. 
-Notation "'_' => b " := (tele (fun x=> base x (fun _=>b%core) UniMuni)) 
+Notation "'_' => b " := (tele (fun x=> base x (fun _=>b%core) UniRed)) 
   (at level 201, b at next level) : mtac_patt_scope.
 Notation "'_' =m> b " := (tele (fun x=> base x (fun _=>b%core) UniMuni)) 
   (at level 201, b at next level) : mtac_patt_scope.
@@ -305,6 +305,21 @@ Notation "'mfix5' f ( x1 : A1 ) ( x2 : A2 ) ( x3 : A3 ) ( x4 : A4 ) ( x5 : A5 ) 
   (at level 85, f at level 0, x1 at next level, x2 at next level, x3 at next level, x4 at next level, x5 at next level, format
   "'[v  ' 'mfix5'  f  '(' x1  ':'  A1 ')'  '(' x2  ':'  A2 ')'  '(' x3  ':'  A3 ')'  '(' x4  ':'  A4 ')'  '(' x5  ':'  A5 ')'  ':'  'M'  T  ':=' '/  ' b ']'").
 
+(* Not working. Must do in Ocaml.
+Notation "'mfix' f x .. y := b" := (
+  let T := (forall x, .. (forall y, M _) ..) in
+  let func := mk_rec (forall f : T, _ : Prop) (fun f =>(fun x => .. (fun y => b) ..)) in 
+  Mrun (r <- func; retW (elem r))
+  )
+  (at level 85, f at level 0, x binder, y binder, only parsing).
+
+Notation "'mfix' f x .. y : 'M' A := b" := (
+  let T := (forall x, .. (forall y, M A) ..) in
+  let func := mk_rec (forall f : T, _ : Prop) (fun f =>(fun x => .. (fun y => b) ..)) in 
+  Mrun (r <- func; retW (elem r))
+  )
+  (at level 85, f at level 0, x binder, y binder, only parsing).
+*)
 
 Definition type_inside {A} (x : M A) := A.
 

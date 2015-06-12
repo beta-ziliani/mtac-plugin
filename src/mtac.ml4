@@ -30,8 +30,6 @@ open Proofview.Notations
 
 open Run
 
-exception ExecFailed of constr
-
 let run_tac t i =
   Proofview.Goal.enter begin fun gl ->
     let sigma = Proofview.Goal.sigma gl in
@@ -42,16 +40,19 @@ let run_tac t i =
       (Proofview.Unsafe.tclEVARS sigma')
       <*> (Tactics.letin_tac None (Name i) v None Locusops.nowhere)
     | Err (_, _, e) -> 
-      raise (ExecFailed e)
+      Errors.error ("Uncaught exception: " ^ (string_of_ppcmds (Termops.print_constr e)))
   end
 
-
 let pretypeT env sigma t c =
-  let (sigma, e) = Lazy.force (MtacNames.mkT_lazy sigma env) in
-  let tt = mkApp(e, [|t|]) in
+  let (_, e) = MtacNames.mkT_lazy sigma env in
   let ty = Retyping.get_type_of env sigma c in
-  let sigma = Evarconv.the_conv_x env tt ty sigma in
-  (sigma, c)
+  let (h, args) = Reductionops.whd_betadeltaiota_stack env sigma ty in
+  if eq_constr_nounivs e h && List.length args = 1 then
+    let sigma = Evarconv.the_conv_x_leq env t (List.hd args) sigma in
+    (sigma, c)
+  else
+    Errors.error "Not a Mtactic"
+
 
 let refine_run_tac (sigma, t) =
   Proofview.Goal.nf_enter begin fun gl ->
@@ -65,7 +66,7 @@ let refine_run_tac (sigma, t) =
       (Proofview.Unsafe.tclEVARS sigma')
       <*> (Proofview.Refine.refine ~unsafe:false (fun s->(s, v)))
     | Err (_, _, e) -> 
-      raise (ExecFailed e)
+      Errors.error ("Uncaught exception: " ^ (string_of_ppcmds (Termops.print_constr e)))
   end
 
 

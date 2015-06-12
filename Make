@@ -8,4 +8,6 @@ src/run.ml
 src/mtac.ml4
 src/mtac.mllib
 theories/Mtac.v
+theories/Mtactics.v
 test-suite/mtactest.v
+test-suite/testmtactics.v
