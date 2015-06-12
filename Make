@@ -11,3 +11,4 @@ theories/Mtac.v
 theories/Mtactics.v
 test-suite/mtactest.v
 test-suite/testmtactics.v
+test-suite/testrefs.v
