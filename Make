@@ -11,6 +11,7 @@ theories/Mtac.v
 theories/Mtactics.v
 theories/Hash.v
 tutorial/mtac_tutorial.v
+tutorial
 test-suite/mtactest.v
 test-suite/testmtactics.v
 test-suite/testrefs.v
