@@ -10,6 +10,7 @@ src/mtac.mllib
 theories/Mtac.v
 theories/Mtactics.v
 theories/Hash.v
+tutorial/mtac_tutorial.v
 test-suite/mtactest.v
 test-suite/testmtactics.v
 test-suite/testrefs.v

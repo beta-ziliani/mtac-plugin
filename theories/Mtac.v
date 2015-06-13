@@ -151,7 +151,6 @@ Definition read : forall {A}, Ref A -> Mtac A :=
 Definition write : forall {A}, Ref A -> A -> Mtac unit :=
   fun A r c=> array_set r 0%N c.
 
-(*
 (** Defines [eval f] to execute after elaboration the Mtactic [f]. 
     It allows e.g. [rewrite (eval f)]. *)
 Class runner A  (f : Mtac A) := { eval : A }.
@@ -159,8 +158,9 @@ Arguments runner {A} _.
 Arguments Build_runner {A} _ _.
 Arguments eval {A} _ {_}.
 
-Hint Extern 20 (runner ?f) => (exact (Build_runner f (mtacrun f)))  : typeclass_instances.
+Hint Extern 20 (runner ?f) => (exact (Build_runner f $(rrun f)$))  : typeclass_instances.
 
+(*
 Definition lift {A} (f : Mtac A) (v : A) := A.
 
 Structure execV {A P} (f : forall x: A, Mtac (P x)) := 
@@ -318,12 +318,12 @@ Definition type_inside {A} (x : M A) := A.
 
 Notation "'mtry' a 'with' p1 | .. | pn 'end'" := 
   (ttry a (fun e=>
-    (tmatch (fun _=>type_inside a) e (cons p1%mtac_patt (.. (cons pn%mtac_patt (cons (base e (fun _ =>raise e) UniRed) nil)) ..)))))
+    (tmatch _ e (cons p1%mtac_patt (.. (cons pn%mtac_patt (cons (base e (fun _ =>raise e) UniRed) nil)) ..)))))
     (at level 82, p1 at level 210, pn at level 210, only parsing).
 
 Notation "'mtry' a 'with' | p1 | .. | pn 'end'" := 
   (ttry a (fun e=>
-    (tmatch (fun _=>type_inside a) e (cons p1%mtac_patt (.. (cons pn%mtac_patt (cons (base e (fun _ =>raise e) UniRed) nil)) ..)))))
+    (tmatch _ e (cons p1%mtac_patt (.. (cons pn%mtac_patt (cons (base e (fun _ =>raise e) UniRed) nil)) ..)))))
     (at level 82, p1 at level 210, pn at level 210, only parsing).
 
 Notation "'mtry' a 'as' e 'in' | p1 | .. | pn 'end'" := 

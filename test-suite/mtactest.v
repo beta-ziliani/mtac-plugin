@@ -27,7 +27,7 @@ Definition MyException (x:nat) : Exception. exact exception. Qed.
 Program Definition test_exception_with_evar : M nat :=
   mtry
     e <- evar nat;
-    raise (MyException e)
+    raise (MyException e) : M nat
   with [e] MyException e => ret e
   end.
 
@@ -227,7 +227,7 @@ Definition AnotherException : Exception.
 Qed.
 
 Definition test_ex (e : Exception) : M string := 
-  mtry raise e
+  mtry raise e : M string
   with
   | AnotherException => ret ""%string
   | MyException "hello"%string => ret "world"%string
