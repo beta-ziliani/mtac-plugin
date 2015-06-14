@@ -41,3 +41,5 @@ Example test_tauto (P Q R : Prop) :
 Proof.
   rrun (tauto0 _).
 Qed.
+
+Definition test_fill_imp (x : nat) : In x [x] := in_eq ?.

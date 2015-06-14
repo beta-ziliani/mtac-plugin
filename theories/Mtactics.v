@@ -4,7 +4,6 @@ Import MtacNotations.
 Require Import List.
 Import ListNotations.
 
-Set Universe Polymorphism.
 
 Module ListMtactics.
 
@@ -189,6 +188,27 @@ Program Definition tauto0 :=
         ret (ex_intro q X r)
     | _ => assumption
     end.
+
+Definition CannotFillImplicits : Exception. exact exception. Qed.
+
+Definition fill_implicits {A B} (x : A) : M B :=
+  let rec :=
+    mfix3 f (n : nat) (A' : Type) (x' : A') : M B :=
+      match n with
+      | 0 => raise CannotFillImplicits
+      | S n' =>
+        mmatch A' with
+        | B => [H] retS (eq_rect A' id x' B H) : M B
+        | [(T : Type) (P : T -> Type)] forall y:T, P y =c> [H]
+          nu z : T,
+            e <- evar T;
+            f n' _ (eq_rect A' id x' (forall y:T, P y) H e)
+        | _ => print_term A';; raise exception
+        end
+      end
+  in rec 10 _ x.
+ 
+Notation "f ?" := (eval (fill_implicits f)) (at level 0).
 
 
 (*
