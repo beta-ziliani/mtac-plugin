@@ -241,10 +241,9 @@ Fixpoint mmatch' A P t (ps : list (tpatt A P t)) : M (P t) :=
   end.
 Arguments mmatch' {A} {P} t ps.
 
-(*
-  Definition inlist {A} (x : A) :=
+  Definition dainlist {A} (x : A) :=
     mfix1 f (s : list A) : M _ :=
-      mmatch' s with
+      mmatch' s (with
       | [l r] l ++ r =>
         mtry
           il <- f l;
@@ -258,9 +257,15 @@ Arguments mmatch' {A} {P} t ps.
         r <- f s';
         ret (in_cons y _ _ r)
       | _ => raise ListMtactics.NotFound
-      end.
+      end).
 
 
+Time Example test_this_dainlist (x y z : nat) : In x ([z;z;z;z;z;z;y]++[z;y;x]) := 
+  $( rrun (dainlist _ _) )$.
+Time Example test_this_inlist (x y z : nat) : In x ([z;z;z;z;z;z;y]++[z;y;x]) := 
+  $( rrun (ListMtactics.inlist _ _) )$.
+
+(*
 Definition match_goal {A} {P} {t} (p : tpatt A P t) : M (P t) :=
   
   l <- hypotheses;
