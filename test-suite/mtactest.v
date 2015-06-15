@@ -33,6 +33,12 @@ Program Definition test_exception_with_evar : M nat :=
 
 Check (Mrun test_exception_with_evar).
 
+Definition ex_test : M nat :=
+  mtry raise (MyException 0) : M nat
+  with exception => ret 1 end.
+Definition double_trouble := mtry ex_test with [n] MyException n => ret 0 end.
+
+Check (Mrun double_trouble).
 End AFewBasicExamples.
 
 Module Abs.

@@ -128,14 +128,12 @@ let constr_to_string t = string_of_ppcmds (Termops.print_constr t)
 
 module Exceptions = struct
 
-  let mkInternalException e sigma env = 
-    let (sigma, c) = MtacNames.mkConstr "InternalException" sigma env in
-    let (sigma, a) = MtacNames.mkConstr e sigma env in
-    (sigma, mkApp (c, [|a|]))
+  let mkInternalException = MtacNames.mkConstr
 
   let mkNullPointer = mkInternalException  "NullPointer"
   let mkTermNotGround = mkInternalException  "TermNotGround"
   let mkOutOfBounds = mkInternalException  "ArrayOutOfBounds"
+  let noPatternMatches = "NoPatternMatches"
 
   (* HACK: we put Prop as the type of the raise. We can put an evar, but
      what's the point anyway? *)
@@ -146,7 +144,6 @@ module Exceptions = struct
 
   let error_stuck = "Cannot reduce term, perhaps an opaque definition?"
   let error_param = "Parameter appears in returned value"
-  let error_no_match = "No pattern matches"
   let error_abs x = "Cannot abstract non variable " ^ (constr_to_string x)
   let error_abs_env = "Cannot abstract variable in a context depending on it"
   let error_abs_type = "Variable is appearing in the returning type"
@@ -682,7 +679,7 @@ let rec open_pattern (env, sigma) p evars =
 let rec runmatch' (env, sigma as ctxt) t ty patts' i =
   let (patts, args) =  whd_betadeltaiota_stack env sigma patts' in
   if CoqList.isNil patts && List.length args = 1 then
-    Exceptions.block Exceptions.error_no_match
+    Exceptions.mkRaise Exceptions.noPatternMatches env sigma 
   else if CoqList.isCons patts && List.length args = 3 then
     match open_pattern ctxt (List.nth args 1) [] with
         Some (sigma', evars, p, body, strategy) ->

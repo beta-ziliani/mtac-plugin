@@ -210,22 +210,57 @@ Definition fill_implicits {A B} (x : A) : M B :=
  
 Notation "f ?" := (eval (fill_implicits f)) (at level 0).
 
-
-(*
-Program Definition open_pattern {A} {P} {t}  :=
+Definition open_pattern {A} {P:A->Type} {t:A}  :=
   mfix1 op (p : tpatt A P t) : M (tpatt A P t) :=
-    match p return M (tpatt A P t) with
-    | base x f u => ret p
+    match p return M _ with
+    | base x f u => ret p : M (tpatt _ _ _)
     | @tele A' B' C t' f =>
       e <- evar C;
       mmatch tpatt A' B' t' with
-      | tpatt A P t => [H] op (_ (f e))
+      | tpatt A P t => [H] op (match H in (_ = y) return y with
+                               | eq_refl => (f e)
+                               end )
       end
     end.
-Next Obligation.
-intros.
-case H. exact x.
-Qed.
+
+Definition NoPatternMatches : Exception. exact exception. Qed.
+
+Fixpoint mmatch' A P t (ps : list (tpatt A P t)) : M (P t) :=
+  match ps with
+  | [] => raise NoPatternMatches
+  | (p :: ps') => 
+    p' <- open_pattern p;
+    mtry 
+      mmatch p' with
+      | [(f : t = t -> M (P t)) u] base t f u => [H] (f eq_refl)
+      | _ => raise NotUnifiableException
+      end
+    with NotUnifiableException =>
+      mmatch' ps'
+    end
+  end.
+Arguments mmatch' {A} {P} t ps.
+
+(*
+  Definition inlist {A} (x : A) :=
+    mfix1 f (s : list A) : M _ :=
+      mmatch' s with
+      | [l r] l ++ r =>
+        mtry
+          il <- f l;
+          ret (in_or_app l r x (or_introl il)) 
+        with ListMtactics.NotFound =>
+          ir <- f r;
+          ret (in_or_app l r x (or_intror ir))
+        end
+      | [s'] (x :: s') => ret (in_eq _ _)
+      | [y s'] (y :: s') =>
+        r <- f s';
+        ret (in_cons y _ _ r)
+      | _ => raise ListMtactics.NotFound
+      end.
+
+
 Definition match_goal {A} {P} {t} (p : tpatt A P t) : M (P t) :=
   
   l <- hypotheses;

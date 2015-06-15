@@ -17,21 +17,13 @@ Module Mtac.
 
 Inductive Exception : Type := exception : Exception.
 
-Definition InternalException : Exception -> Exception.
-  exact id.
-Qed.
+Definition NullPointer : Exception. exact exception. Qed.
 
-Definition NullPointer : Exception.
-  exact exception.
-Qed.
+Definition TermNotGround : Exception. exact exception. Qed.
 
-Definition TermNotGround : Exception.
-  exact exception.
-Qed.
+Definition ArrayOutOfBounds : Exception. exact exception. Qed.
 
-Definition ArrayOutOfBounds : Exception.
-  exact exception.
-Qed.
+Definition NoPatternMatches : Exception. exact exception. Qed.
 
 Record dyn := Dyn { type : Type; elem : type }.
 
@@ -314,7 +306,7 @@ Definition type_inside {A} (x : M A) := A.
 
 Notation "'mtry' a ls" := 
   (ttry a (fun e=>
-    (tmatch _ e ls)))
+    (tmatch _ e (app ls (cons ([x] x=>raise x)%mtac_patt nil)))))
     (at level 82, a at level 100, ls at level 91, only parsing).
 
 (* 

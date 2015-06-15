@@ -61,7 +61,7 @@ Fail Check (Mrun test_out_of_range).
 
 Check (Mrun (
        mtry test_out_of_range 
-       with InternalException ArrayOutOfBounds => ret 0 end)).
+       with ArrayOutOfBounds => ret 0 end)).
 
 Definition test_init :=
   a <- Array.init 10 (fun i=>ret i);
@@ -121,7 +121,7 @@ Example out_of_scope : (fun z : nat => Mrun
     r <- ref 0;
     (nu x : nat, r ::= x);;
     !r
-  with (InternalException NullPointer) =>
+  with NullPointer =>
     ret z
   end)
   = @id nat.
@@ -133,7 +133,7 @@ Example not_out_of_scope : (fun z : nat => Mrun
     r <- ref 0;
     (nu x : nat, r ::= z);;
     !r
-  with (InternalException NullPointer) =>
+  with NullPointer =>
     ret 0
   end)
   = @id nat.
@@ -146,7 +146,7 @@ Example not_out_of_scope_after_out_scope : (fun z : nat => Mrun
     r <- ref 0;
     (nu x : nat, r ::= x;; r ::= z);;
     !r
-  with (InternalException NullPointer) =>
+  with NullPointer =>
     ret 1
   end)
   = @id nat.
@@ -159,7 +159,7 @@ Example out_of_scope2 : (fun z : nat => Mrun
     r <- ref 0;
     (nu x y : nat, r ::= x);;
     !r
-  with (InternalException NullPointer) =>
+  with NullPointer =>
     ret z
   end)
   = @id nat.
@@ -176,7 +176,7 @@ Example not_out_of_scope2 : (fun z : nat => Mrun
       r ::= x);;
     r ::= z;;
     !r
-  with (InternalException NullPointer) =>
+  with NullPointer =>
     ret 0
   end)
   = @id nat.
@@ -195,7 +195,7 @@ Example not_out_of_scope2' : (fun z : nat => Mrun
       r ::= x);;
     r ::= z;;
     !r
-  with (InternalException NullPointer) =>
+  with NullPointer =>
     ret 0
   end)
   = @id nat.
