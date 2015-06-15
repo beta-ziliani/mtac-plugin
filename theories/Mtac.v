@@ -126,7 +126,7 @@ Inductive Mtac : Type -> Prop :=
 
 | Cevar : forall A, list Hyp -> Mtac A
 
-with tpatt : forall A (B : A -> Type) (t : A), Type := 
+with tpatt : forall A (B : A -> Type) (t : A), Prop := 
 | base : forall {A B t} (x:A) (b : t = x -> Mtac (B x)), Unification -> tpatt A B t
 | tele : forall {A B C t}, (forall (x : C), tpatt A B t) -> tpatt A B t.
 
@@ -225,27 +225,23 @@ Notation "'_' =c> b " := (tele (fun x=> base x (fun _=>b%core) UniRed))
 
 Delimit Scope mtac_patt_scope with mtac_patt.
 
-Notation "'mmatch' t 'with' | p1 | .. | pn 'end'" := 
-  (tmatch (fun _=>_) t ((fun l : list (tpatt _ (fun _=>_) _)=>l) (cons p1%mtac_patt (.. (cons pn%mtac_patt nil) ..))))
-    (at level 90, p1 at level 210, pn at level 210, only parsing).
-Notation "'mmatch' t 'return' 'M' p 'with' | p1 | .. | pn 'end'" := 
-  (tmatch (fun _=>p) t ((fun l : list (tpatt _ (fun _=>p) _)=>l) (cons p1%mtac_patt (.. (cons pn%mtac_patt nil) ..))))
-    (at level 90, p1 at level 210, pn at level 210, only parsing).
-Notation "'mmatch' t 'as' x 'return' 'M' p 'with' | p1 | .. | pn 'end'" := 
-  (tmatch (fun x=>p) t ((fun l : list (tpatt _ (fun x=>p) _)=>l) (cons p1%mtac_patt (.. (cons pn%mtac_patt nil) ..))))
-    (at level 90, p1 at level 210, pn at level 210, format
-  "'[v' 'mmatch'  t  'as'  x  'return'  'M'  p  'with' '/' '|'  p1 '/' '|'  .. '/' '|'  pn '/' 'end' ']'").
+Notation "'with' | p1 | .. | pn 'end'" := 
+  ((cons p1%mtac_patt (.. (cons pn%mtac_patt nil) ..)))
+    (at level 91, p1 at level 210, pn at level 210).
+Notation "'with' p1 | .. | pn 'end'" := 
+  ((cons p1%mtac_patt (.. (cons pn%mtac_patt nil) ..)))
+    (at level 91, p1 at level 210, pn at level 210).
 
-Notation "'mmatch' t 'with' p1 | .. | pn 'end'" := 
-  (tmatch (fun _=>_) t  ((fun l : list (tpatt _ (fun _=>_) _)=>l)(cons p1%mtac_patt (.. (cons pn%mtac_patt nil) ..)))) 
-    (at level 90, p1 at level 210, pn at level 210, only parsing).
-Notation "'mmatch' t 'return' 'M' p 'with' p1 | .. | pn 'end'" := 
-  (tmatch (fun _=>p) t ((fun l : list (tpatt _ (fun _=>p) _)=>l) (cons p1%mtac_patt (.. (cons pn%mtac_patt nil) ..))))
-    (at level 90, p1 at level 210, pn at level 210, only parsing).
-Notation "'mmatch' t 'as' x 'return' 'M' p 'with' p1 | .. | pn 'end'" := 
-  (tmatch (fun x=>p) t ((fun l : list (tpatt _ (fun x=>p) _)=>l) (cons p1%mtac_patt (.. (cons pn%mtac_patt nil) ..))))
-    (at level 90, p1 at level 210, pn at level 210, only parsing).
-
+Notation "'mmatch' t ls" := 
+  (tmatch (fun _=>_) t ((fun l : list (tpatt _ (fun _=>_) _)=>l) ls))
+    (at level 90, ls at level 91, only parsing).
+Notation "'mmatch' t 'return' 'M' p ls" := 
+  (tmatch (fun _=>p) t ((fun l : list (tpatt _ (fun _=>p) _)=>l) ls))
+    (at level 90, p at level 0, ls at level 91, only parsing).
+Notation "'mmatch' t 'as' x 'return' 'M' p ls" := 
+  (tmatch (fun x=>p) t ((fun l : list (tpatt _ (fun x=>p) _)=>l) ls))
+    (at level 90, p at level 0, ls at level 91, format
+  "'[v' 'mmatch'  t  'as'  x  'return'  'M'  p  '/'  ls ']'"). 
 
 Notation "'nu' x .. y , a" := (tnu (fun x=>.. (tnu (fun y=> a))..)) 
 (at level 81, x binder, y binder, right associativity). 
@@ -298,40 +294,40 @@ Notation "'mfix5' f ( x1 : A1 ) ( x2 : A2 ) ( x3 : A3 ) ( x4 : A4 ) ( x5 : A5 ) 
   (at level 85, f at level 0, x1 at next level, x2 at next level, x3 at next level, x4 at next level, x5 at next level, format
   "'[v  ' 'mfix5'  f  '(' x1  ':'  A1 ')'  '(' x2  ':'  A2 ')'  '(' x3  ':'  A3 ')'  '(' x4  ':'  A4 ')'  '(' x5  ':'  A5 ')'  ':'  'M'  T  ':=' '/  ' b ']'").
 
-(* Not working. Must do in Ocaml.
+(* Not working. Must do in Ocaml. *)
 Notation "'mfix' f x .. y := b" := (
   let T := (forall x, .. (forall y, M _) ..) in
   let func := mk_rec (forall f : T, _ : Prop) (fun f =>(fun x => .. (fun y => b) ..)) in 
-  Mrun (r <- func; retW (elem r))
+  eval (r <- func; retW (elem r))
   )
   (at level 85, f at level 0, x binder, y binder, only parsing).
 
 Notation "'mfix' f x .. y : 'M' A := b" := (
   let T := (forall x, .. (forall y, M A) ..) in
   let func := mk_rec (forall f : T, _ : Prop) (fun f =>(fun x => .. (fun y => b) ..)) in 
-  Mrun (r <- func; retW (elem r))
+  eval (r <- func; retW (elem r))
   )
   (at level 85, f at level 0, x binder, y binder, only parsing).
-*)
+
 
 Definition type_inside {A} (x : M A) := A.
 
-Notation "'mtry' a 'with' p1 | .. | pn 'end'" := 
+Notation "'mtry' a ls" := 
   (ttry a (fun e=>
-    (tmatch _ e (cons p1%mtac_patt (.. (cons pn%mtac_patt (cons (base e (fun _ =>raise e) UniRed) nil)) ..)))))
-    (at level 82, p1 at level 210, pn at level 210, only parsing).
+    (tmatch _ e ls)))
+    (at level 82, a at level 100, ls at level 91, only parsing).
 
+(* 
 Notation "'mtry' a 'with' | p1 | .. | pn 'end'" := 
   (ttry a (fun e=>
-    (tmatch _ e (cons p1%mtac_patt (.. (cons pn%mtac_patt (cons (base e (fun _ =>raise e) UniRed) nil)) ..)))))
+    (tmatch _ e (cons p1%mtac_patt (.. (cons pn%mtac_patt (cons  nil)) ..)))))
     (at level 82, p1 at level 210, pn at level 210, only parsing).
 
 Notation "'mtry' a 'as' e 'in' | p1 | .. | pn 'end'" := 
   (ttry a (fun e=>tmatch (fun _=>_) e (cons p1%mtac_patt (.. (cons pn%mtac_patt (cons (base e (fun _=>raise e) UniRed) nil)) ..))))
     (at level 82, e at next level, p1 at level 210, pn at level 210, format 
    "'[v' 'mtry' '/  '  a  '/' 'as'  e  'in' '/' '|'  p1  '/' '|'  ..  '/' '|'  pn '/' 'end' ']'"
-).
-
+).*)
 
 Notation "! a" := (read a) (at level 80).
 Notation "a ::= b" := (write a b) (at level 80).

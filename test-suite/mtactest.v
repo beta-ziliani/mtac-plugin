@@ -183,7 +183,7 @@ Definition ElementNotFound : Exception.  exact exception. Qed.
 
 Definition inlist A (x : A) := 
   mfix1 f (s : _) : M (In x s) :=
-  mmatch s as s' return M In x s' with
+  mmatch s as s' return M (In x s') with
   | [s] x::s => ret (in_eq x s)
   | [y s] y :: s => 
     t <- f s : M (In x s);
