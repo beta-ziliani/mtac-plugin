@@ -23,14 +23,16 @@ Installation
 ============
 
 The plugin works currently with Coq v8.5. Through OPAM, 
-this plugin is available in Coq's repo-unstable:
+this plugin is available in Coq's development repository:
 ```
- # opam install coq:mtac
+opam repo add coq-released https://coq.inria.fr/opam/released
+opam repo add coq-extra-dev https://coq.inria.fr/opam/extra-dev
+opam install -j4 -v coq:mtac
 ```
 Otherwise, you should have coqc, ocamlc and make in your path. 
 Then simply do:
 ```
- # ./configure.sh
+./configure.sh
 ```
 To generate a makefile from the description in Make, then `make`.
 This will consecutively build the plugin, the supporting 
