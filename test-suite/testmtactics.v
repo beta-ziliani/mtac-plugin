@@ -43,3 +43,31 @@ Proof.
 Qed.
 
 Definition test_fill_imp (x : nat) : In x [x] := in_eq ?.
+
+Section TestMmatch'.
+
+  Definition dainlist {A} (x : A) :=
+    mfix1 f (s : list A) : M _ :=
+      mmatch' s (with
+      | [? l r] l ++ r =>
+        mtry
+          il <- f l;
+          ret (in_or_app l r x (or_introl il)) 
+        with ListMtactics.NotFound =>
+          ir <- f r;
+          ret (in_or_app l r x (or_intror ir))
+        end
+      | [? s'] (x :: s') => ret (in_eq _ _)
+      | [? y s'] (y :: s') =>
+        r <- f s';
+        ret (in_cons y _ _ r)
+      | _ => raise ListMtactics.NotFound
+      end).
+
+
+Time Example test_this_dainlist (x y z : nat) : In x ([z;z;z;z;z;z;y]++[z;y;x]) := 
+  $( rrun (dainlist _ _) )$.
+Time Example test_this_inlist (x y z : nat) : In x ([z;z;z;z;z;z;y]++[z;y;x]) := 
+  $( rrun (ListMtactics.inlist _ _) )$.
+
+End TestMmatch'.

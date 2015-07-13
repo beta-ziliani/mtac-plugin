@@ -14,7 +14,7 @@ Module ListMtactics.
   Definition inlist {A} (x : A) :=
     mfix1 f (s : list A) : M _ :=
       mmatch s as s' return M (In x s') with
-      | [l r] l ++ r =>
+      | [? l r] l ++ r =>
         mtry
           il <- f l;
           ret (in_or_app l r x (or_introl il)) 
@@ -22,8 +22,8 @@ Module ListMtactics.
           ir <- f r;
           ret (in_or_app l r x (or_intror ir))
         end
-      | [s'] (x :: s') => ret (in_eq _ _)
-      | [y s'] (y :: s') =>
+      | [? s'] (x :: s') => ret (in_eq _ _)
+      | [? y s'] (y :: s') =>
         r <- f s';
         ret (in_cons y _ _ r)
       | _ => raise NotFound
@@ -32,24 +32,30 @@ Module ListMtactics.
   Definition find {A} {B : A -> Type} (x : A) :=
     mfix1 f (s : list (sigT B)) : M (B x) :=
       mmatch s with
-      | [l r] l ++ r => 
+      | [? l r] l ++ r => 
         mtry 
           f l
         with NotFound =>
           f r
         end
-      | [y s'] (existT B x y :: s') => ret y
-      | [y s'] (y :: s') => f s'
+      | [? y s'] (existT B x y :: s') => ret y
+      | [? y s'] (y :: s') => f s'
       | _ => raise NotFound
       end.
 
   Definition remove {A} {B : A -> Type} (x : A) :=
     mfix1 f (s : list (sigT B)) : M (list (sigT B)) :=
       mmatch s with
-      | [y s'] (existT B x y :: s') => ret s'
-      | [y s'] (y :: s') => r <- f s'; ret (y :: r)
+      | [? y s'] (existT B x y :: s') => ret s'
+      | [? y s'] (y :: s') => r <- f s'; ret (y :: r)
       | _ => raise NotFound
       end.
+
+  Polymorphic Fixpoint iter {A:Type} (f : A -> M unit) (l : list A) : M unit :=
+    match l with 
+    | [] => ret tt
+    | (a :: l') => f a;; iter f l'
+    end.
 
 End ListMtactics.
 
@@ -60,8 +66,8 @@ Definition assumption {P : Type} : M P :=
   hs <- hypotheses; 
   let f := mfix1 f (s : list Hyp) : M P :=
     mmatch s return M P with
-    | [(x:P) t s'] (@ahyp P x t :: s') => ret x
-    | [a s'] (a :: s') => f s'
+    | [? (x:P) t s'] (@ahyp P x t :: s') => ret x
+    | [? a s'] (a :: s') => f s'
     | _ => raise (AssumptionNotFound P)
     end
   in f hs.
@@ -82,7 +88,7 @@ Definition apply {P T} (l : T) : M P :=
     mtry unify P T (fun a=>a) (fun _ => l')
     with NotUnifiableException =>
       mmatch T return M P with
-      | [T1 T2] (forall x:T1, T2 x) => [H]
+      | [? T1 T2] (forall x:T1, T2 x) => [H]
           e <- evar T1;
           l' <- retS (eq_rect_r (fun T => T -> T2 e)
             (fun l : forall x : T1, T2 x => l e) H l');
@@ -97,12 +103,12 @@ Definition eapply {P T} (l : T)  :=
     mtry unify P T (fun a=>(a*list dyn)%type) (fun _ => (l', es))
     with NotUnifiableException =>
       mmatch T with
-      | [T1 T2] T1 -> T2 => [H]
+      | [? T1 T2] T1 -> T2 => [H]
           e <- evar T1;
           l' <- retS (eq_rect_r (fun T => T -> T2)
             (fun l : T1 -> T2 => l e) H l');
           app T2 l' (Dyn _ e :: es)
-      | [T1 T2] (forall x:T1, T2 x) => [H]
+      | [? T1 T2] (forall x:T1, T2 x) => [H]
           e <- evar T1;
           l' <- retS (eq_rect_r (fun T => T -> T2 e)
             (fun l : forall x : T1, T2 x => l e) H l');
@@ -120,7 +126,7 @@ Fixpoint try_all (t : forall T, T -> M unit)  ls :=
     if b then t _ e;; try_all t ls' else try_all t ls'
   end.
 
-Definition eassumption T (e:T) :=
+Polymorphic Definition eassumption (T : Type) (e:T) :=
   r <- @assumption T;
   mmatch r with e => ret tt | _ => raise exception end.
 
@@ -155,34 +161,34 @@ Program Definition tauto0 :=
   mfix1 f (P : Prop) : M P :=
     mmatch P as P' return M P' with
     | True => ret I
-    | [R Q] R /\ Q =>
+    | [? R Q] R /\ Q =>
       r1 <- f R;
       r2 <- f Q;
       ret (conj r1 r2)
-    | [R Q] R \/ Q =>
+    | [? R Q] R \/ Q =>
       mtry
         r <- f R;
         ret (or_introl Q r)
-      with [T (x:T)] AssumptionNotFound x =>
+      with [? T (x:T)] AssumptionNotFound x =>
         r <- f Q;
         ret (or_intror R r)
       end
-    | [R Q T : Prop] (R /\ Q -> T) =>
+    | [? R Q T : Prop] (R /\ Q -> T) =>
       r <- f (R -> Q -> T);
       ret (curry r)
-    | [R Q T : Prop] (R \/ Q -> T) =>
+    | [? R Q T : Prop] (R \/ Q -> T) =>
       r1 <- f (R -> T);
       r2 <- f (Q -> T);
       ret (orE r1 r2)
-    | [R Q : Prop] R -> Q =>
+    | [? R Q : Prop] R -> Q =>
       nu (x : R),
         r <- f Q;
         abs x r
-    | [R (Q : R -> Prop)] forall x: R, Q x =>
+    | [? R (Q : R -> Prop)] forall x: R, Q x =>
       nu (x : R),
         r <- f (Q x);
         abs x r
-    | [A (q:A -> Prop)] (exists x : A, q x) =>
+    | [? A (q:A -> Prop)] (exists x : A, q x) =>
         X <- evar A;
         r <- f (q X);
         ret (ex_intro q X r)
@@ -199,7 +205,7 @@ Definition fill_implicits {A B} (x : A) : M B :=
       | S n' =>
         mmatch A' with
         | B => [H] retS (eq_rect A' id x' B H) : M B
-        | [(T : Type) (P : T -> Type)] forall y:T, P y =c> [H]
+        | [? (T : Type) (P : T -> Type)] forall y:T, P y =c> [H]
           nu z : T,
             e <- evar T;
             f n' _ (eq_rect A' id x' (forall y:T, P y) H e)
@@ -232,7 +238,7 @@ Fixpoint mmatch' A P t (ps : list (tpatt A P t)) : M (P t) :=
     p' <- open_pattern p;
     mtry 
       mmatch p' with
-      | [(f : t = t -> M (P t)) u] base t f u => [H] (f eq_refl)
+      | [? (f : t = t -> M (P t)) u] base t f u => [H] (f eq_refl)
       | _ => raise NotUnifiableException
       end
     with NotUnifiableException =>
@@ -241,33 +247,47 @@ Fixpoint mmatch' A P t (ps : list (tpatt A P t)) : M (P t) :=
   end.
 Arguments mmatch' {A} {P} t ps.
 
-  Definition dainlist {A} (x : A) :=
-    mfix1 f (s : list A) : M _ :=
-      mmatch' s (with
-      | [l r] l ++ r =>
-        mtry
-          il <- f l;
-          ret (in_or_app l r x (or_introl il)) 
-        with ListMtactics.NotFound =>
-          ir <- f r;
-          ret (in_or_app l r x (or_intror ir))
-        end
-      | [s'] (x :: s') => ret (in_eq _ _)
-      | [y s'] (y :: s') =>
-        r <- f s';
-        ret (in_cons y _ _ r)
-      | _ => raise ListMtactics.NotFound
-      end).
+Definition eopen_pattern {A} {P:A->Type} {t:A}  :=
+  mfix2 op (p : tpatt A P t) (ls : list dyn) : M (list dyn * tpatt A P t)%type :=
+    match p return M _ with
+    | base x f u => ret (ls, p) : M (list dyn * tpatt _ _ _)
+    | @tele A' B' C t' f =>
+      e <- evar (C : Type);
+      mmatch tpatt A' B' t' with
+      | tpatt A P t => [H] op (match H in (_ = y) return y with
+                               | eq_refl => (f e)
+                               end ) (Dyn _ e :: ls)
+      end
+    end.
+Arguments eopen_pattern {A} {P} {t} x1 x2.
+Set Printing Universes.
 
 
-Time Example test_this_dainlist (x y z : nat) : In x ([z;z;z;z;z;z;y]++[z;y;x]) := 
-  $( rrun (dainlist _ _) )$.
-Time Example test_this_inlist (x y z : nat) : In x ([z;z;z;z;z;z;y]++[z;y;x]) := 
-  $( rrun (ListMtactics.inlist _ _) )$.
+Example test_match_context : forall x:nat, x = x.
+  match goal with
+  | [ |- context [_ = _] ] => exact (fun x=>eq_refl _)
+  end.
+Abort.
 
-(*
-Definition match_goal {A} {P} {t} (p : tpatt A P t) : M (P t) :=
-  
-  l <- hypotheses;
-  
+Definition match_goal {A:Type} {P:A->Type} (t : A) (p : tpatt A P t) 
+: M (list dyn * P t) :=
+  pes <- eopen_pattern p [];
+  let (ls, goal) := pes : (list dyn@{i} * tpatt _ _ _)%type in
+  mmatch goal with
+  | [? f u] @base A P t t f u => 
+    pf <- (f eq_refl) : M (P t);
+    ret (ls, pf)
+  end.
+
+Arguments match_goal _ _ _ p%mtac_patt.
+
+(*  
+Example test (x : nat) (y : nat) (H : x > y) : x > y.
+rrun (p <- match_goal ([? a] a => eassumption a;; evar a >> ret )%mtac_patt; ret (snd p)).
+
+match goal with
+| [u:nat, v:nat, H : ?v > ?u |- _] => idtac v; apply I 
+end.
+
+
 *)

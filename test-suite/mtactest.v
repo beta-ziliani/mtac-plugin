@@ -28,7 +28,7 @@ Program Definition test_exception_with_evar : M nat :=
   mtry
     e <- evar nat;
     raise (MyException e) : M nat
-  with [e] MyException e => ret e
+  with [? e] MyException e => ret e
   end.
 
 Check (Mrun test_exception_with_evar).
@@ -36,7 +36,7 @@ Check (Mrun test_exception_with_evar).
 Definition ex_test : M nat :=
   mtry raise (MyException 0) : M nat
   with exception => ret 1 end.
-Definition double_trouble := mtry ex_test with [n] MyException n => ret 0 end.
+Definition double_trouble := mtry ex_test with [? n] MyException n => ret 0 end.
 
 Check (Mrun double_trouble).
 End AFewBasicExamples.
@@ -80,7 +80,7 @@ Set Printing Universes.
 
 Program Definition test_ho {A} B (t : A) :=
   mmatch t with
-  | [f (x:B)] f x => ret f
+  | [? f (x:B)] f x => ret f
   | _ => raise exception
   end.
 
@@ -144,7 +144,7 @@ Definition madd : nat -> nat -> M nat :=
   mfix2 f (m : _) (n : nat) : M _ :=
     mmatch m return M nat with
     | 0 => ret n
-    | [m'] (S m') => x <- f m' n; ret (S x)
+    | [? m'] (S m') => x <- f m' n; ret (S x)
     end.
 
 Time Definition mresult1: nat := Mrun (madd 100 5000).
@@ -190,8 +190,8 @@ Definition ElementNotFound : Exception.  exact exception. Qed.
 Definition inlist A (x : A) := 
   mfix1 f (s : _) : M (In x s) :=
   mmatch s as s' return M (In x s') with
-  | [s] x::s => ret (in_eq x s)
-  | [y s] y :: s => 
+  | [? s] x::s => ret (in_eq x s)
+  | [? y s] y :: s => 
     t <- f s : M (In x s);
     ret (in_cons y x s t)
   | _ => raise ElementNotFound
@@ -237,8 +237,8 @@ Definition test_ex (e : Exception) : M string :=
   with
   | AnotherException => ret ""%string
   | MyException "hello"%string => ret "world"%string
-  | [s] MyException s => ret s
-(*  | [e'] e' => raise e' *) (* universe constraints problems *)
+  | [? s] MyException s => ret s
+  | [? e'] e' => raise e'
   end.
 
 Check (Mrun (test_ex (MyException "hello"%string))).
@@ -253,7 +253,7 @@ Import ListNotations.
 Definition inlist'' {A} (x : A) :=
   mfix1 f (s : list A) : M _ :=
     mmatch s as s' return M (In x s') with
-    | [l r] l ++ r => 
+    | [? l r] l ++ r => 
       mtry 
         il <- f l;
         ret (in_or_app l r x (or_introl il))
@@ -261,8 +261,8 @@ Definition inlist'' {A} (x : A) :=
         ir <- f r;
         ret (in_or_app l r x (or_intror ir))
       end
-    | [s'] (x :: s') => ret (in_eq _ _)
-    | [y s'] (y :: s') =>
+    | [? s'] (x :: s') => ret (in_eq _ _)
+    | [? y s'] (y :: s') =>
       r <- f s';
       ret (in_cons y _ _ r)
     | _ => raise AnotherException
@@ -272,8 +272,8 @@ Definition inlist'' {A} (x : A) :=
 Definition remove {A} (x : A) :=
   mfix1 f (s : list A) : M (list A) :=
     mmatch s with
-    | [s'] (x :: s') => f s'
-    | [y s'] (y :: s') => 
+    | [? s'] (x :: s') => f s'
+    | [? y s'] (y :: s') => 
       r <- f s';
       ret (y :: r)
     | _ => ret s
@@ -283,11 +283,11 @@ Definition remove {A} (x : A) :=
 Definition inlistS {A} (x : A) :=
   mfix1 f (s : list A) : M (In x s) :=
     mmatch s with
-    | [s'] (x :: s') => ret (in_eq _ _)
-    | [y s'] (y :: s') =>
+    | [? s'] (x :: s') => ret (in_eq _ _)
+    | [? y s'] (y :: s') =>
       r <- f s';
       ret (in_cons y _ _ r)
-    | [l r] l ++ r => 
+    | [? l r] l ++ r => 
       mtry 
         il <- f l;
         ret (in_or_app l r x (or_introl il))

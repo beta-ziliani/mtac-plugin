@@ -103,7 +103,7 @@ Definition test_ex e :=
   with
   | AnException => ret ""%string
   | MyException "hello"%string => ret "world"%string
-  | [s] MyException s => ret s
+  | [? s] MyException s => ret s
   end.
 
 Definition empty_string := Mrun (test_ex AnException).
@@ -269,8 +269,8 @@ Qed.
 Definition inlist A (x : A) :=
   mfix1 f (s : list A) : M (In x s) :=
     mmatch s with
-    | [s'] (x :: s') => ret (in_eq _ _)
-    | [y s'] (y :: s') =>
+    | [? s'] (x :: s') => ret (in_eq _ _)
+    | [? y s'] (y :: s') =>
       r <- f s';
       ret (in_cons y _ _ r)
     | _ => raise NotFound
@@ -344,7 +344,7 @@ a hole ([_]) and it cannot guess what to fill in that hole.
 Program Definition inlist' A (x : A) :=
   mfix1 f (s : list A) : M (In x s) :=
     mmatch s with
-    | [l r] l ++ r => 
+    | [? l r] l ++ r => 
       mtry 
         il <- f l;
         ret _ : M (In _ (_ ++ _))
@@ -352,8 +352,8 @@ Program Definition inlist' A (x : A) :=
         ir <- f r;
         ret _ : M (In _ (_ ++ _))
       end
-    | [s'] (x :: s') => ret (in_eq _ _)
-    | [y s'] (y :: s') =>
+    | [? s'] (x :: s') => ret (in_eq _ _)
+    | [? y s'] (y :: s') =>
       r <- f s';
       ret (in_cons y _ _ r)
     | _ => raise NotFound
@@ -390,7 +390,7 @@ in the holes with these two terms. *)
 Definition inlist'' A (x : A) :=
   mfix1 f (s : list A) : M (In x s) :=
     mmatch s with
-    | [l r] l ++ r => 
+    | [? l r] l ++ r => 
       mtry 
         il <- f l;
         ret (in_or_app _ _ _ (or_introl il))
@@ -398,8 +398,8 @@ Definition inlist'' A (x : A) :=
         ir <- f r;
         ret (in_or_app _ _ _ (or_intror ir))
       end
-    | [s'] (x :: s') => ret (in_eq _ _)
-    | [y s'] (y :: s') =>
+    | [? s'] (x :: s') => ret (in_eq _ _)
+    | [? y s'] (y :: s') =>
       r <- f s';
       ret (in_cons y _ _ r)
     | _ => raise NotFound
@@ -457,11 +457,11 @@ Definition simpl_prop_auto :=
   mfix1 f (p : Prop) : M p :=
     mmatch p as p' return M p' with
     | True => ret I 
-    | [ p1 p2 ] p1 /\ p2 =>
+    | [? p1 p2 ] p1 /\ p2 =>
          r1 <- f p1 ;
          r2 <- f p2 ;
          ret (conj r1 r2)
-    | [p1 p2]  p1 \/ p2 =>
+    | [? p1 p2]  p1 \/ p2 =>
          mtry 
            r1 <- f p1 ;
            ret (or_introl r1)
@@ -503,8 +503,8 @@ that the element in the body of the first case should return a [P]. *)
 Definition search (P : Prop) := 
   mfix1 f (s:list dyn) : M P := 
     mmatch s with
-    | [(x:P) s'] (Dyn x) :: s' => ret x
-    | [d s'] d :: s' => f s'
+    | [? (x:P) s'] (Dyn x) :: s' => ret x
+    | [? d s'] d :: s' => f s'
     | _ => raise NotFound
     end.
 
@@ -519,11 +519,11 @@ Definition prop_auto' :=
   mfix2 f (c : list dyn) (p : Prop) : M p :=
     mmatch p as p' return M p' with
     | True => ret I 
-    | [ p1 p2 ] p1 /\ p2 =>
+    | [? p1 p2 ] p1 /\ p2 =>
          r1 <- f c p1 ;
          r2 <- f c p2 ;
          ret (conj r1 r2)
-    | [p1 p2]  p1 \/ p2 =>
+    | [? p1 p2]  p1 \/ p2 =>
          mtry 
            r1 <- f c p1 ;
            ret (or_introl r1)
@@ -531,11 +531,11 @@ Definition prop_auto' :=
            r2 <- f c p2 ;
            ret (or_intror r2)
          end
-    | [(p1 p2 : Prop)] p1 -> p2 =>
+    | [? (p1 p2 : Prop)] p1 -> p2 =>
           nu (x:p1),
           r <- f (Dyn x :: c) p2;
           abs x r
-    | [p':Prop] p' => search p' c
+    | [? p':Prop] p' => search p' c
     end.
 
 
@@ -608,11 +608,11 @@ Definition tauto' :=
   mfix2 f (c : list dyn) (p : Prop) : M p :=
     mmatch p as p' return M p' with
     | True => ret I 
-    | [p1 p2] p1 /\ p2 =>
+    | [? p1 p2] p1 /\ p2 =>
          r1 <- f c p1 ;
          r2 <- f c p2 ;
          ret (conj r1 r2)
-    | [p1 p2]  p1 \/ p2 =>
+    | [? p1 p2]  p1 \/ p2 =>
          mtry 
            r1 <- f c p1 ;
            ret (or_introl r1)
@@ -620,15 +620,15 @@ Definition tauto' :=
            r2 <- f c p2 ;
            ret (or_intror r2)
          end
-    | [(p1 p2 : Prop)] p1 -> p2 =>
+    | [? (p1 p2 : Prop)] p1 -> p2 =>
           nu (x:p1),
           r <- f (Dyn x :: c) p2;
           abs x r
-    | [A (q:A -> Prop)] (forall x:A, q x) =>
+    | [? A (q:A -> Prop)] (forall x:A, q x) =>
           nu (x:A),
           r <- f c (q x);
           abs x r
-    | [A (q:A -> Prop)] (exists x:A, q x) =>
+    | [? A (q:A -> Prop)] (exists x:A, q x) =>
           X <- evar A;
           r <- f c (q X) ;
           b <- is_evar X;
@@ -636,7 +636,7 @@ Definition tauto' :=
             raise NotFound
           else
             ret (ex_intro q X r)
-    | [p':Prop] p' => search p' c
+    | [? p':Prop] p' => search p' c
     end.
 
 (** The [forall] case is similar to the implication case from before but taking
@@ -699,7 +699,7 @@ Program Definition eq_nats  :=
   mfix2 f (x : nat) (y : nat) : M (x == y = true) :=
     mmatch (x, y)  with
     | (x, x) => [H] ret _
-    | [x1 x2] (x1 + x2, x2 + x1) => [H]
+    | [? x1 x2] (x1 + x2, x2 + x1) => [H]
       ret _
     end.
 Next Obligation.
