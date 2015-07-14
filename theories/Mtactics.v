@@ -51,7 +51,7 @@ Module ListMtactics.
       | _ => raise NotFound
       end.
 
-  Polymorphic Fixpoint iter {A:Type} (f : A -> M unit) (l : list A) : M unit :=
+  Fixpoint iter {A:Type} (f : A -> M unit) (l : list A) : M unit :=
     match l with 
     | [] => ret tt
     | (a :: l') => f a;; iter f l'
@@ -126,7 +126,7 @@ Fixpoint try_all (t : forall T, T -> M unit)  ls :=
     if b then t _ e;; try_all t ls' else try_all t ls'
   end.
 
-Polymorphic Definition eassumption (T : Type) (e:T) :=
+Definition eassumption (T : Type) (e:T) :=
   r <- @assumption T;
   mmatch r with e => ret tt | _ => raise exception end.
 
@@ -216,29 +216,32 @@ Definition fill_implicits {A B} (x : A) : M B :=
  
 Notation "f ?" := (eval (fill_implicits f)) (at level 0).
 
+Definition munify A (x y : A) (P : A -> Type) (f : x = y -> M (P y)) : M (P x) 
+  := mmatch x with y => [H] f H | _ => raise NotUnifiableException end.
+Arguments munify {A} x y P f.
+
 Definition open_pattern {A} {P:A->Type} {t:A}  :=
   mfix1 op (p : tpatt A P t) : M (tpatt A P t) :=
     match p return M _ with
     | base x f u => ret p : M (tpatt _ _ _)
     | @tele A' B' C t' f =>
       e <- evar C;
-      mmatch tpatt A' B' t' with
-      | tpatt A P t => [H] op (match H in (_ = y) return y with
-                               | eq_refl => (f e)
-                               end )
-      end
+      munify (tpatt A' B' t') (tpatt A P t) (fun _ => tpatt A P t)
+      (fun H => op (match H in (_ = y) return y with
+                      | eq_refl => (f e)
+                    end ))
     end.
 
 Definition NoPatternMatches : Exception. exact exception. Qed.
-
 Fixpoint mmatch' A P t (ps : list (tpatt A P t)) : M (P t) :=
   match ps with
   | [] => raise NoPatternMatches
   | (p :: ps') => 
     p' <- open_pattern p;
     mtry 
-      mmatch p' with
-      | [? (f : t = t -> M (P t)) u] base t f u => [H] (f eq_refl)
+      match p' with
+      | @base A P t t' f u => 
+        munify t t' P f : M (P t)
       | _ => raise NotUnifiableException
       end
     with NotUnifiableException =>
@@ -263,12 +266,6 @@ Arguments eopen_pattern {A} {P} {t} x1 x2.
 Set Printing Universes.
 
 
-Example test_match_context : forall x:nat, x = x.
-  match goal with
-  | [ |- context [_ = _] ] => exact (fun x=>eq_refl _)
-  end.
-Abort.
-
 Definition match_goal {A:Type} {P:A->Type} (t : A) (p : tpatt A P t) 
 : M (list dyn * P t) :=
   pes <- eopen_pattern p [];
@@ -280,7 +277,120 @@ Definition match_goal {A:Type} {P:A->Type} (t : A) (p : tpatt A P t)
   end.
 
 Arguments match_goal _ _ _ p%mtac_patt.
+Notation "'mmatch' x ls" := (mmatch' x ls).
+Definition inl' A (x : A) : forall l : list A, M (In x l) :=
+  mfix1 f (l : list A) : M (In x l) :=
+  mmatch l with
+  | [? s] (x :: s) => ret in_eq?
+  | [? y s] (y :: s) => r <- f s; ret (in_cons y _ _ r)
+  | _ => raise exception
+  end.
 
+
+Definition intro {A : Type} {P: A -> Type} (f : forall x:A, M (P x)) 
+  : M (forall x:A, P x)
+  := nu x:A, r <- f x; abs x r.
+
+
+
+Definition LMap {A B} (f : A -> M B) :=
+  mfix1 rec (l : list A) : M (list B) := 
+  match l with
+  | [] => ret []
+  | (x :: xs) => l <- rec xs;
+                b <- f x;
+                ret (b :: l)
+  end.
+  
+Definition CantCoerce : Exception. exact exception. Qed.
+
+Definition coerce {A B : Type} (x : A) : M B :=
+  mmatch A return M B with
+  | B => [H] ret (eq_rect_r _ (fun x0 : B => x0) H x)
+  | _ => raise CantCoerce
+  end.
+
+Program Definition copy_ctx {A} (B : A -> Type) :=
+  mfix1 rec (d : dyn) : M Type :=
+  mmatch d with
+  | [? C (D : C -> Type) (E : forall y:C, D y)] {| elem := fun x : C=>E x |} => 
+    nu y : C,
+      r <- rec (Dyn _ (E y));
+      pabs y r
+  | [? c : A] {| elem := c |} => 
+    ret (B c) 
+  end.
+
+Definition destruct {A : Type} (n : A) {P : A -> Prop} : M (P n) :=
+  l <- constrs A;
+  l <- LMap (fun d : dyn=> 
+             t' <- copy_ctx P d;
+             e <- evar t';
+             ret {| elem := e |}) l;
+  let c := {| case_ind := A;
+              case_val := n;
+              case_type := P n;
+              case_return := {| elem := fun n : A => P n |};
+              case_branches := l
+           |} in
+  d <- makecase c;
+  d <- coerce (elem d);
+  ret d.
+
+
+Goal forall n : nat, True.
+  intro n.
+  Set Printing Implicit.
+  rrun (destruct n).
+  Unshelve.
+  simpl.
+  apply I.
+  intro n'.
+  simpl.
+Abort.
+
+
+(*
+This is a proposal for a different kind of goal handling than the one attempted by Thomas. Given the difficulty to maintain Ocaml code free of bugs, the proposal is to keep as much code on the Coq side as possible. This is in accordance to #2. In this proposal, goals are just evars that are registered as goals. At a given point one can access the local context (hypotheses).
+
+The primitives in Mtac2 can be the following:
+```Coq
+registerGoal {A:Type} : A -> Mtac2 unit
+unregisterGoal {A:Type} : A -> Mtac2 unit
+goals : Mtac2 (list dyn)
+hypotheses : Mtac2 (list dyn)
+```
+
+The high-level idea is that the current goal will be passed along the tactics. For instance, the intro tactic 
+
+Then, for refining a goal we can just use the primitive for unification (see #2). For instance, the apply tactic can be written as follow:
+```Coq
+Definition apply {P T} (l : T) : M P :=
+  (mfix2 app (T : _) (l' : T) : M P :=
+    mtry unify P T (fun a=>a) (fun _ => l')
+    with NotUnifiableException =>
+      mmatch T return M P with
+      | [? T1 T2] (forall x:T1, T2 x) => [H]
+          e <- evar T1;
+          registerGoal e;
+          l' <- retS (eq_rect_r (fun T => T -> T2 e)
+            (fun l : forall x : T1, T2 x => l e) H l');
+          app (T2 e) l'
+      | _ => raise (CantApply P l)
+      end
+    end) _ l.
+```
+Then, a tactical like ";" can take the list of goals and pass them to the list of tactics. Note that each time we create a new goal, it has its local context mapped to the current one. This will maintain the current Ltac semantics. For instance, a tactic like the following, in the context where ```x``` is a natural number will generate two "goals" with the second one in an extended context (intros is just using the nu operator).
+```Coq
+case x; [ | intros n ]; reflexivity
+```
+
+There is an issue with the 
+*)
+
+Example test A (x y z : A) : In x [z;y;x].
+rrun (inl' _ _).
+Qed.
 (*  
 Example test (x : nat) (y : nat) (H : x > y) : x > y.
 rrun (p <- match_goal ([? a] a => eassumption a;; evar a >> ret )%mtac_patt; ret (snd p)).

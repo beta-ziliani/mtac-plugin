@@ -118,6 +118,8 @@ Inductive Mtac : Type -> Prop :=
 
 | Cevar : forall A, list Hyp -> Mtac A
 
+| pabs : forall {A P} (x : A), P x -> Mtac Type
+
 with tpatt : forall A (B : A -> Type) (t : A), Prop := 
 | base : forall {A B t} (x:A) (b : t = x -> Mtac (B x)), Unification -> tpatt A B t
 | tele : forall {A B C t}, (forall (x : C), tpatt A B t) -> tpatt A B t.

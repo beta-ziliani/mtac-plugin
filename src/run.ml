@@ -808,7 +808,7 @@ let dest_Case (env, sigma) t_type t =
 
 let make_Case (env, sigma) case =
   let map = Constr.mkConstr "List.map" in
-  let (sigma, elem) = MtacNames.mkConstr "elem" sigma env in
+  let (sigma, elem) = MtacNames.mkUConstr "elem" sigma env in
   let (sigma, mkDyn) = MtacNames.mkUConstr "Dyn" sigma env in
   let (sigma, case_ind) = MtacNames.mkConstr "case_ind" sigma env in
   let (sigma, case_val) = MtacNames.mkConstr "case_val" sigma env in
@@ -916,7 +916,7 @@ let multi_subst l c =
   substrec 0 c
 
 (** Abstract *)
-let abs (env, sigma, metas) a p x y =
+let abs ?(mkprod=false) (env, sigma, metas) a p x y =
   let x = whd_betadeltaiota env sigma x in
     (* check if the type p does not depend of x, and that no variable
        created after x depends on it.  otherwise, we will have to
@@ -927,7 +927,9 @@ let abs (env, sigma, metas) a p x y =
       if noccurn_env env rel then
         try
           let y' = mysubstn (mkRel 1) rel y in
-          let t = mkLambda (Anonymous, a, y') in
+          let t = 
+	    if mkprod then Term.mkProd (Names.Anonymous, a, y')
+	    else Term.mkLambda (Names.Anonymous, a, y') in
           return sigma metas t
         with AbstractingArrayType ->
           Exceptions.block Exceptions.error_abs_ref          
@@ -940,7 +942,9 @@ let abs (env, sigma, metas) a p x y =
     if not (Termops.occur_var env name p) then
       if not (name_occurn_env env name) then
         let y' = Vars.subst_vars [name] y in
-        let t = mkLambda (Name name, a, y') in
+        let t = 
+	  if mkprod then Term.mkProd (Name name, a, y')
+	  else Term.mkLambda (Name name, a, y') in
         return sigma metas t
       else
         Exceptions.block Exceptions.error_abs_env
@@ -1199,6 +1203,10 @@ let rec run' (env, renv, sigma, undo, metas as ctxt) t =
   | 29 -> (* Cevar *)
     let ty, hyp = nth 0, nth 1 in
     cvar (env, sigma, metas) ty hyp
+
+  | 30 -> (* pabs *)
+    let a, p, x, y = nth 0, nth 1, nth 2, nth 3 in
+    abs ~mkprod:true (env, sigma, metas) a p x y
 
       | _ ->
 	Exceptions.block "I have no idea what is this construct of T that you have here"
