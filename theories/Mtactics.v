@@ -209,7 +209,7 @@ Definition fill_implicits {A B} (x : A) : M B :=
           nu z : T,
             e <- evar T;
             f n' _ (eq_rect A' id x' (forall y:T, P y) H e)
-        | _ => print_term A';; raise exception
+        | _ => raise exception
         end
       end
   in rec 10 _ x.
@@ -387,13 +387,8 @@ case x; [ | intros n ]; reflexivity
 
 There is an issue with the 
 *)
-
-Example test A (x y z : A) : In x [z;y;x].
-rrun (inl' _ _).
-Qed.
-(*  
 Example test (x : nat) (y : nat) (H : x > y) : x > y.
-rrun (p <- match_goal ([? a] a => eassumption a;; evar a >> ret )%mtac_patt; ret (snd p)).
+rrun (p <- match_goal ([? a] a => @assumption a)%mtac_patt; ret (snd p)).
 
 match goal with
 | [u:nat, v:nat, H : ?v > ?u |- _] => idtac v; apply I 
