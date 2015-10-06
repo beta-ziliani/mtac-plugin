@@ -389,7 +389,8 @@ There is an issue with the
 *)
 Example test (x : nat) (y : nat) (H : x > y) : x > y.
 rrun (p <- match_goal ([? a] a => @assumption a)%mtac_patt; ret (snd p)).
-
+Qed.
+(*
 match goal with
 | [u:nat, v:nat, H : ?v > ?u |- _] => idtac v; apply I 
 end.
