@@ -319,7 +319,7 @@ application of the tactic [rrun] with the [$(...)$] extension in Coq 8.5
 to use tactics to build terms. *)
 
 Example z_in_xyz (x y z : nat) : In z (x :: y :: z :: nil)
-  := $(rrun (inlist _ _))$.
+  := ltac:(rrun (inlist _ _)).
 
 (** An alternative is to use [eval], which is similar to [Mrun], except
 that it performs the execution of the Mtactic after the type inference
@@ -454,8 +454,8 @@ only three cases:
 *)
 
 Definition simpl_prop_auto :=
-  mfix1 f (p : Prop) : M p :=
-    mmatch p as p' return M p' with
+  mfix1 f (p : Prop) : M (p : Prop) :=
+    mmatch p as p' return M (p':Prop) with
     | True => ret I 
     | [? p1 p2 ] p1 /\ p2 =>
          r1 <- f p1 ;
@@ -517,7 +517,7 @@ and a proposition. The first three cases are the same as before.  *)
 
 Definition prop_auto' :=
   mfix2 f (c : list dyn) (p : Prop) : M p :=
-    mmatch p as p' return M p' with
+    mmatch p as p' return M (p':Prop) with
     | True => ret I 
     | [? p1 p2 ] p1 /\ p2 =>
          r1 <- f c p1 ;
@@ -606,7 +606,7 @@ are the same as before. *)
 
 Definition tauto' :=
   mfix2 f (c : list dyn) (p : Prop) : M p :=
-    mmatch p as p' return M p' with
+    mmatch p as p' return M (p':Prop) with
     | True => ret I 
     | [? p1 p2] p1 /\ p2 =>
          r1 <- f c p1 ;

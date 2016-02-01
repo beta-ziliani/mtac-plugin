@@ -18,9 +18,9 @@ Goal True.
   rrun (ret I).
 Qed.
 
-Definition test_of_definition : nat := $( rrun (ret 0) )$.
+Definition test_of_definition : nat := ltac:( rrun (ret 0) ).
 
-Definition test_of_definition_evar  : 0 = 0 := $( rrun (ret (eq_refl _)) )$.
+Definition test_of_definition_evar  : 0 = 0 := ltac:( rrun (ret (eq_refl _)) ).
 
 
 Definition MyException (x:nat) : Exception. exact exception. Qed.
@@ -47,7 +47,7 @@ Definition abs_evar (A : Type) :=
   f <- @abs Type (fun A'=>A') A e  : M (forall A : Type, A);
   ret (f nat, f bool).
 
-Check (fun A : Type => $( rrun (abs_evar A) )$ ). 
+Check (fun A : Type => ltac:( rrun (abs_evar A) ) ). 
 
 Definition abs_val2 (A : Type) :=
   e <- evar A;

@@ -158,8 +158,8 @@ Proof. tauto. Qed.
 
 
 Program Definition tauto0 :=
-  mfix1 f (P : Prop) : M P :=
-    mmatch P as P' return M P' with
+  mfix1 f (P : Prop) : M (P : Prop) :=
+    mmatch P as P' return M (P' : Prop) with
     | True => ret I
     | [? R Q] R /\ Q =>
       r1 <- f R;
@@ -269,7 +269,7 @@ Set Printing Universes.
 Definition match_goal {A:Type} {P:A->Type} (t : A) (p : tpatt A P t) 
 : M (list dyn * P t) :=
   pes <- eopen_pattern p [];
-  let (ls, goal) := pes : (list dyn@{i} * tpatt _ _ _)%type in
+  let (ls, goal) := pes : (list dyn * tpatt _ _ _)%type in
   mmatch goal with
   | [? f u] @base A P t t f u => 
     pf <- (f eq_refl) : M (P t);

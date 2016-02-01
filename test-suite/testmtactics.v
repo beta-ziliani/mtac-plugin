@@ -66,8 +66,8 @@ Section TestMmatch'.
 
 
 Time Example test_this_dainlist (x y z : nat) : In x ([z;z;z;z;z;z;y]++[z;y;x]) := 
-  $( rrun (dainlist _ _) )$.
+  ltac:( rrun (dainlist _ _) ).
 Time Example test_this_inlist (x y z : nat) : In x ([z;z;z;z;z;z;y]++[z;y;x]) := 
-  $( rrun (ListMtactics.inlist _ _) )$.
+  ltac:( rrun (ListMtactics.inlist _ _) ).
 
 End TestMmatch'.

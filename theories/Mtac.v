@@ -152,7 +152,7 @@ Arguments runner {A} _.
 Arguments Build_runner {A} _ _.
 Arguments eval {A} _ {_}.
 
-Hint Extern 20 (runner ?f) => (exact (Build_runner f $(rrun f)$))  : typeclass_instances.
+Hint Extern 20 (runner ?f) => (exact (Build_runner f ltac:(rrun f)))  : typeclass_instances.
 
 (*
 Definition lift {A} (f : Mtac A) (v : A) := A.
@@ -176,7 +176,7 @@ Export Mtac.
 
 Module MtacNotations.
 
-Notation "'Mrun' t" := ($( rrun t )$) (at level 0).
+Notation "'Mrun' t" := (ltac:(rrun t)) (at level 0).
 
 Notation "'M'" := Mtac.
 
